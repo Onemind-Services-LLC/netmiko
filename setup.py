@@ -51,6 +51,7 @@ setup(
         "scp>=0.13.2",
         "tenacity",
         "ntc-templates",
+        "textfsm<=1.1.2",
         "pyserial",
         "importlib_resources ; python_version<'3.7'",
     ],
