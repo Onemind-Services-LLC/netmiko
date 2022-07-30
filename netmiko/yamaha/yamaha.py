@@ -71,7 +71,7 @@ class YamahaBase(BaseConnection):
         self, cmd: str = "save", confirm: bool = False, confirm_response: str = ""
     ) -> str:
         """Saves Config."""
-        if confirm is True:
+        if confirm:
             raise ValueError("Yamaha does not support save_config confirmation.")
         self.enable()
         # Some devices are slow so match on trailing-prompt if you can

@@ -21,8 +21,7 @@ PRINT_DEBUG = False
 def generate_csv_timestamp():
     """yyyy-MM-dd HH:mm:ss"""
     now = datetime.now()
-    t_stamp = f"{now.year}-{now.month}-{now.day} {now.hour}:{now.minute}:{now.second}"
-    return t_stamp
+    return f"{now.year}-{now.month}-{now.day} {now.hour}:{now.minute}:{now.second}"
 
 
 def write_csv(device_name, netmiko_results):

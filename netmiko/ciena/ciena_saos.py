@@ -98,7 +98,7 @@ class CienaSaosFileTransfer(BaseFileTransfer):
         header_line, filesystem_line = remote_output.splitlines()
 
         filesystem, _, _, space_avail, *_ = header_line.split()
-        if "Filesystem" != filesystem or "Avail" not in space_avail:
+        if filesystem != "Filesystem" or "Avail" not in space_avail:
             # Filesystem 1K-blocks Used Available Use% Mounted on
             raise ValueError(err_msg)
 
@@ -157,11 +157,10 @@ class CienaSaosFileTransfer(BaseFileTransfer):
             raise IOError("Unable to find file on remote system")
 
         escape_file_name = re.escape(remote_file)
-        pattern = r"^.* ({}).*$".format(escape_file_name)
-        match = re.search(pattern, remote_out, flags=re.M)
-        if match:
+        pattern = f"^.* ({escape_file_name}).*$"
+        if match := re.search(pattern, remote_out, flags=re.M):
             # Format: -rw-r--r--  1 pyclass  wheel  12 Nov  5 19:07 /var/tmp/test3.txt
-            line = match.group(0)
+            line = match[0]
             file_size = line.split()[4]
             return int(file_size)
 
@@ -174,7 +173,7 @@ class CienaSaosFileTransfer(BaseFileTransfer):
 
         This command can be CPU intensive on the remote device.
         """
-        if base_cmd == "":
+        if not base_cmd:
             base_cmd = "md5sum"
         if remote_file is None:
             if self.direction == "put":

@@ -109,7 +109,7 @@ class HuaweiSSH(HuaweiBase):
         prompt_or_password_change = r"(?:Change now|Please choose|[>\]])"
         data = self.read_until_pattern(pattern=prompt_or_password_change)
         if re.search(password_change_prompt, data):
-            self.write_channel("N" + self.RETURN)
+            self.write_channel(f"N{self.RETURN}")
             self.read_until_pattern(pattern=r"[>\]]")
 
 
@@ -129,9 +129,8 @@ class HuaweiTelnet(HuaweiBase):
 
         delay_factor = self.select_delay_factor(delay_factor)
         password_change_prompt = r"(Change now|Please choose 'YES' or 'NO').+"
-        combined_pattern = r"({}|{}|{})".format(
-            pri_prompt_terminator, alt_prompt_terminator, password_change_prompt
-        )
+        combined_pattern = f"({pri_prompt_terminator}|{alt_prompt_terminator}|{password_change_prompt})"
+
 
         output = ""
         return_msg = ""
@@ -157,7 +156,7 @@ class HuaweiTelnet(HuaweiBase):
 
                 # Search for password change prompt, send "N"
                 if re.search(password_change_prompt, output):
-                    self.write_channel("N" + self.TELNET_RETURN)
+                    self.write_channel(f"N{self.TELNET_RETURN}")
                     output = self.read_until_pattern(pattern=combined_pattern)
                     return_msg += output
 

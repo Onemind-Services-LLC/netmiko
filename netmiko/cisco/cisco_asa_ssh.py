@@ -68,10 +68,7 @@ class CiscoAsaSSH(CiscoSSHConnection):
         updated after each context change.
         """
         output = super().send_command_timing(*args, **kwargs)
-        if len(args) >= 1:
-            command_string = args[0]
-        else:
-            command_string = kwargs["command_string"]
+        command_string = args[0] if args else kwargs["command_string"]
         if "changeto" in command_string:
             self.set_base_prompt()
         return output
@@ -83,16 +80,11 @@ class CiscoAsaSSH(CiscoSSHConnection):
         If the ASA is in multi-context mode, then the base_prompt needs to be
         updated after each context change.
         """
-        if len(args) >= 1:
-            command_string = args[0]
-        else:
-            command_string = kwargs["command_string"]
-
+        command_string = args[0] if args else kwargs["command_string"]
         # If changeto in command, look for '#' to determine command is done
-        if "changeto" in command_string:
-            if len(args) <= 1:
-                expect_string = kwargs.get("expect_string", "#")
-                kwargs["expect_string"] = expect_string
+        if "changeto" in command_string and len(args) <= 1:
+            expect_string = kwargs.get("expect_string", "#")
+            kwargs["expect_string"] = expect_string
         output = super().send_command(*args, **kwargs)
 
         if "changeto" in command_string:
@@ -109,13 +101,11 @@ class CiscoAsaSSH(CiscoSSHConnection):
         happens the trailing '(config*' needs stripped off.
         """
         cur_base_prompt = super().set_base_prompt(*args, **kwargs)
-        match = re.search(r"(.*)\(conf.*", cur_base_prompt)
-        if match:
-            # strip off (conf.* from base_prompt
-            self.base_prompt = match.group(1)
-            return self.base_prompt
-        else:
+        if not (match := re.search(r"(.*)\(conf.*", cur_base_prompt)):
             return cur_base_prompt
+            # strip off (conf.* from base_prompt
+        self.base_prompt = match[1]
+        return self.base_prompt
 
     def asa_login(self) -> None:
         """
@@ -129,11 +119,10 @@ class CiscoAsaSSH(CiscoSSHConnection):
         """
         delay_factor = self.select_delay_factor(0)
 
-        i = 1
         max_attempts = 10
-        self.write_channel("login" + self.RETURN)
+        self.write_channel(f"login{self.RETURN}")
         output = self.read_until_pattern(pattern=r"login")
-        while i <= max_attempts:
+        for _ in range(1, max_attempts + 1):
             time.sleep(0.5 * delay_factor)
             output = self.read_channel()
             if "sername" in output:
@@ -145,9 +134,7 @@ class CiscoAsaSSH(CiscoSSHConnection):
             elif "#" in output:
                 return
             else:
-                self.write_channel("login" + self.RETURN)
-            i += 1
-
+                self.write_channel(f"login{self.RETURN}")
         msg = "Unable to enter enable mode!"
         raise NetmikoAuthenticationException(msg)
 
@@ -163,11 +150,7 @@ class CiscoAsaSSH(CiscoSSHConnection):
         """Cisco ASA needed that extra \r\n\r"""
         newline = re.compile("(\r\n\r|\r\r\r\n|\r\r\n|\r\n|\n\r)")
         a_string = newline.sub(self.RESPONSE_RETURN, a_string)
-        if self.RESPONSE_RETURN == "\n":
-            # Delete any remaining \r
-            return re.sub("\r", "", a_string)
-        else:
-            return a_string
+        return re.sub("\r", "", a_string) if self.RESPONSE_RETURN == "\n" else a_string
 
 
 class CiscoAsaFileTransfer(CiscoFileTransfer):

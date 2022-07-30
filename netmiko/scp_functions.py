@@ -19,11 +19,8 @@ def progress_bar(
     filename: AnyStr, size: int, sent: int, peername: Optional[str] = None
 ) -> None:
     max_width = 50
-    if isinstance(filename, bytes):
-        filename_str = filename.decode()
-    else:
-        filename_str = filename
-    clear_screen = chr(27) + "[2J"
+    filename_str = filename.decode() if isinstance(filename, bytes) else filename
+    clear_screen = f"{chr(27)}[2J"
     terminating_char = "|"
 
     # Percentage done
@@ -90,10 +87,11 @@ def file_transfer(
         "file_verified": True,
     }
 
-    if "cisco_ios" in ssh_conn.device_type or "cisco_xe" in ssh_conn.device_type:
-        cisco_ios = True
-    else:
-        cisco_ios = False
+    cisco_ios = (
+        "cisco_ios" in ssh_conn.device_type
+        or "cisco_xe" in ssh_conn.device_type
+    )
+
     if not cisco_ios and inline_transfer:
         raise ValueError("Inline Transfer only supported for Cisco IOS/Cisco IOS-XE")
 
@@ -114,44 +112,42 @@ def file_transfer(
         scp_args["file_system"] = file_system
 
     TransferClass: Callable[..., BaseFileTransfer]
-    if inline_transfer:
-        TransferClass = InLineTransfer
-    else:
-        TransferClass = FileTransfer
-
+    TransferClass = InLineTransfer if inline_transfer else FileTransfer
     with TransferClass(**scp_args) as scp_transfer:
         if scp_transfer.check_file_exists():
-            if overwrite_file:
-                if verify_file:
-                    if scp_transfer.verify_file():
-                        return nottransferred_but_verified
-                    else:
-                        # File exists, you can overwrite it, MD5 is wrong (transfer file)
-                        verifyspace_and_transferfile(scp_transfer)
-                        if scp_transfer.verify_file():
-                            return transferred_and_verified
-                        else:
-                            raise ValueError(
-                                "MD5 failure between source and destination files"
-                            )
-                else:
-                    # File exists, you can overwrite it, but MD5 not allowed (transfer file)
-                    verifyspace_and_transferfile(scp_transfer)
-                    return transferred_and_notverified
-            else:
-                # File exists, but you can't overwrite it.
-                if verify_file:
-                    if scp_transfer.verify_file():
-                        return nottransferred_but_verified
-                msg = "File already exists and overwrite_file is disabled"
-                raise ValueError(msg)
-        else:
-            verifyspace_and_transferfile(scp_transfer)
-            # File doesn't exist
-            if verify_file:
+            if (
+                overwrite_file
+                and verify_file
+                and scp_transfer.verify_file()
+                or not overwrite_file
+                and verify_file
+                and scp_transfer.verify_file()
+            ):
+                return nottransferred_but_verified
+            elif (
+                overwrite_file
+                and verify_file
+                and not scp_transfer.verify_file()
+            ):
+                # File exists, you can overwrite it, MD5 is wrong (transfer file)
+                verifyspace_and_transferfile(scp_transfer)
                 if scp_transfer.verify_file():
                     return transferred_and_verified
                 else:
-                    raise ValueError("MD5 failure between source and destination files")
-            else:
+                    raise ValueError(
+                        "MD5 failure between source and destination files"
+                    )
+            elif overwrite_file:
+                # File exists, you can overwrite it, but MD5 not allowed (transfer file)
+                verifyspace_and_transferfile(scp_transfer)
                 return transferred_and_notverified
+            else:
+                raise ValueError("File already exists and overwrite_file is disabled")
+        else:
+            verifyspace_and_transferfile(scp_transfer)
+            if not verify_file:
+                return transferred_and_notverified
+            if scp_transfer.verify_file():
+                return transferred_and_verified
+            else:
+                raise ValueError("MD5 failure between source and destination files")

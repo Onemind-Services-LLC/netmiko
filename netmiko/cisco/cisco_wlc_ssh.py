@@ -33,8 +33,7 @@ class CiscoWlcSSH(BaseConnection):
         time.sleep(delay_factor * 0.5)
         output = ""
         while i <= 12:
-            output = self.read_channel()
-            if output:
+            if output := self.read_channel():
                 if "login as" in output or "User:" in output:
                     assert isinstance(self.username, str)
                     self.write_channel(self.username + self.RETURN)
@@ -90,14 +89,12 @@ class CiscoWlcSSH(BaseConnection):
                     time.sleep(kwargs["delay_factor"] * 3)
                     i += 1
                     new_data = ""
-                    new_data = self.read_channel()
-                    if new_data:
+                    if new_data := self.read_channel():
                         output += new_data
                     else:
                         not_done = False
 
-        strip_prompt = kwargs.get("strip_prompt", True)
-        if strip_prompt:
+        if strip_prompt := kwargs.get("strip_prompt", True):
             # Had to strip trailing prompt twice.
             output = self.strip_prompt(output)
             output = self.strip_prompt(output)
@@ -189,7 +186,7 @@ class CiscoWlcSSH(BaseConnection):
             # Don't automatically save the config (user's responsibility)
             if "Would you like to save them now" in output:
                 self._session_log_fin = True
-                self.write_channel("n" + self.RETURN)
+                self.write_channel(f"n{self.RETURN}")
 
             try:
                 self.write_channel(self.RETURN)

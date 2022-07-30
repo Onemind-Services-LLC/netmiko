@@ -112,9 +112,10 @@ def log_writes(func: F) -> F:
                     str(write_bytes(out_data, encoding=self.encoding))
                 )
             )
-            if self.session_log:
-                if self.session_log.fin or self.session_log.record_writes:
-                    self.session_log.write(out_data)
+            if self.session_log and (
+                self.session_log.fin or self.session_log.record_writes
+            ):
+                self.session_log.write(out_data)
         except UnicodeDecodeError:
             # Don't log non-ASCII characters; this is null characters and telnet IAC (PY2)
             pass
@@ -294,10 +295,7 @@ class BaseConnection:
 
         self.TELNET_RETURN = "\r\n"
         if default_enter is None:
-            if "telnet" not in device_type:
-                self.RETURN = "\n"
-            else:
-                self.RETURN = self.TELNET_RETURN
+            self.RETURN = "\n" if "telnet" not in device_type else self.TELNET_RETURN
         else:
             self.RETURN = default_enter
 
@@ -310,10 +308,7 @@ class BaseConnection:
         if not ip and not host and "serial" not in device_type:
             raise ValueError("Either ip or host must be set")
         if port is None:
-            if "telnet" in device_type:
-                port = 23
-            else:
-                port = 22
+            port = 23 if "telnet" in device_type else 22
         self.port = int(port)
 
         self.username = username
@@ -384,14 +379,14 @@ class BaseConnection:
         }
         if serial_settings is None:
             serial_settings = {}
-        self.serial_settings.update(serial_settings)
+        self.serial_settings |= serial_settings
 
         if "serial" in device_type:
             self.host = "serial"
             comm_port = self.serial_settings.pop("port")
             # Get the proper comm port reference if a name was enterred
             comm_port = check_serial_port(comm_port)
-            self.serial_settings.update({"port": comm_port})
+            self.serial_settings["port"] = comm_port
 
         # set in set_base_prompt method
         self.base_prompt = ""
@@ -408,10 +403,9 @@ class BaseConnection:
             self.protocol = "ssh"
 
             self.key_policy: paramiko.client.MissingHostKeyPolicy
-            if not ssh_strict:
-                self.key_policy = paramiko.AutoAddPolicy()
-            else:
-                self.key_policy = paramiko.RejectPolicy()
+            self.key_policy = (
+                paramiko.RejectPolicy() if ssh_strict else paramiko.AutoAddPolicy()
+            )
 
             # Options for SSH host_keys
             self.use_keys = use_keys

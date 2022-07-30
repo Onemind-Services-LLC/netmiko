@@ -1,4 +1,5 @@
 """Miscellaneous utility functions."""
+
 from typing import (
     Any,
     AnyStr,
@@ -92,7 +93,7 @@ SHOW_RUN_MAPPER = {
 # Expand SHOW_RUN_MAPPER to include '_ssh' key
 new_dict = {}
 for k, v in SHOW_RUN_MAPPER.items():
-    new_key = k + "_ssh"
+    new_key = f"{k}_ssh"
     new_dict[k] = v
     new_dict[new_key] = v
 SHOW_RUN_MAPPER = new_dict
@@ -140,8 +141,7 @@ def find_cfg_file(
     # Filter optional_path if null
     search_paths = [path for path in search_paths if path]
     for path in search_paths:
-        files = glob(f"{path}/.netmiko.yml") + glob(f"{path}/netmiko.yml")
-        if files:
+        if files := glob(f"{path}/.netmiko.yml") + glob(f"{path}/netmiko.yml"):
             return files[0]
     raise IOError(
         ".netmiko.yml file not found in NETMIKO_TOOLS environment variable directory,"
@@ -177,12 +177,11 @@ def obtain_all_devices(
     my_devices: Dict[str, Union[List[str], Dict[str, Any]]]
 ) -> Dict[str, Dict[str, Any]]:
     """Dynamically create 'all' group."""
-    new_devices = {}
-    for device_name, device_or_group in my_devices.items():
-        # Skip any groups
-        if not isinstance(device_or_group, list):
-            new_devices[device_name] = device_or_group
-    return new_devices
+    return {
+        device_name: device_or_group
+        for device_name, device_or_group in my_devices.items()
+        if not isinstance(device_or_group, list)
+    }
 
 
 def obtain_netmiko_filename(device_name: str) -> str:
@@ -203,11 +202,9 @@ def ensure_dir_exists(verify_dir: str) -> None:
     if not os.path.exists(verify_dir):
         # Doesn't exist create dir
         os.makedirs(verify_dir)
-    else:
-        # Exists
-        if not os.path.isdir(verify_dir):
-            # Not a dir, raise an exception
-            raise ValueError(f"{verify_dir} is not a directory")
+    elif not os.path.isdir(verify_dir):
+        # Not a dir, raise an exception
+        raise ValueError(f"{verify_dir} is not a directory")
 
 
 def find_netmiko_dir() -> Tuple[str, str]:
@@ -276,16 +273,6 @@ def get_template_dir(_skip_ntc_package: bool = False) -> str:
 
     """
 
-    msg = """
-Directory containing TextFSM index file not found.
-
-Please set the NET_TEXTFSM environment variable to point at the directory containing your TextFSM
-index file.
-
-Alternatively, `pip install ntc-templates` (if using ntc-templates).
-
-"""
-
     # Try NET_TEXTFSM environment variable
     template_dir = os.environ.get("NET_TEXTFSM")
     if template_dir is not None:
@@ -316,6 +303,16 @@ Alternatively, `pip install ntc-templates` (if using ntc-templates).
 
     index = os.path.join(template_dir, "index")
     if not os.path.isdir(template_dir) or not os.path.isfile(index):
+        msg = """
+Directory containing TextFSM index file not found.
+
+Please set the NET_TEXTFSM environment variable to point at the directory containing your TextFSM
+index file.
+
+Alternatively, `pip install ntc-templates` (if using ntc-templates).
+
+"""
+
         raise ValueError(msg)
     return os.path.abspath(template_dir)
 
@@ -324,9 +321,11 @@ def clitable_to_dict(cli_table: clitable.CliTable) -> List[Dict[str, str]]:
     """Converts TextFSM cli_table object to list of dictionaries."""
     return_list = []
     for row in cli_table:
-        temp_dict = {}
-        for index, element in enumerate(row):
-            temp_dict[cli_table.header[index].lower()] = element
+        temp_dict = {
+            cli_table.header[index].lower(): element
+            for index, element in enumerate(row)
+        }
+
         return_list.append(temp_dict)
     return return_list
 
@@ -347,10 +346,7 @@ def _textfsm_parse(
             tfsm_parse(raw_output, attrs)
 
         structured_data = clitable_to_dict(textfsm_obj)
-        if structured_data == []:
-            return raw_output
-        else:
-            return structured_data
+        return raw_output if structured_data == [] else structured_data
     except (FileNotFoundError, CliTableError):
         return raw_output
 
@@ -373,7 +369,7 @@ def get_structured_data_textfsm(
         attrs = {"Command": command, "Platform": platform}
 
     if template is None:
-        if attrs == {}:
+        if not attrs:
             raise ValueError(
                 "Either 'platform/command' or 'template' must be specified."
             )
@@ -383,10 +379,13 @@ def get_structured_data_textfsm(
         output = _textfsm_parse(textfsm_obj, raw_output, attrs)
 
         # Retry the output if "cisco_xe" and not structured data
-        if platform and "cisco_xe" in platform:
-            if not isinstance(output, list):
-                attrs["Platform"] = "cisco_ios"
-                output = _textfsm_parse(textfsm_obj, raw_output, attrs)
+        if (
+            platform
+            and "cisco_xe" in platform
+            and not isinstance(output, list)
+        ):
+            attrs["Platform"] = "cisco_ios"
+            output = _textfsm_parse(textfsm_obj, raw_output, attrs)
         return output
     else:
         template_path = Path(os.path.expanduser(template))
@@ -447,7 +446,7 @@ def run_ttp_template(
 
     # get inputs load for TTP template
     ttp_inputs_load = parser.get_input_load()
-    log.debug("run_ttp_template: inputs load - {}".format(ttp_inputs_load))
+    log.debug(f"run_ttp_template: inputs load - {ttp_inputs_load}")
 
     # go over template's inputs and collect output from devices
     for template_name, inputs in ttp_inputs_load.items():
@@ -459,17 +458,15 @@ def run_ttp_template(
             # run sanity checks
             if method not in dir(connection):
                 log.warning(
-                    "run_ttp_template: '{}' input, unsupported method '{}', skipping".format(
-                        input_name, method
-                    )
+                    f"run_ttp_template: '{input_name}' input, unsupported method '{method}', skipping"
                 )
+
                 continue
             elif not commands:
                 log.warning(
-                    "run_ttp_template: '{}' input no commands to collect, skipping".format(
-                        input_name
-                    )
+                    f"run_ttp_template: '{input_name}' input no commands to collect, skipping"
                 )
+
                 continue
 
             # collect commands output from device
@@ -534,8 +531,7 @@ def get_structured_data_genie(
     try:
         # Test whether there is a parser for given command (return Exception if fails)
         get_parser(command, device)
-        parsed_output: Dict[str, Any] = device.parse(command, output=raw_output)
-        return parsed_output
+        return device.parse(command, output=raw_output)
     except Exception:
         return raw_output
 

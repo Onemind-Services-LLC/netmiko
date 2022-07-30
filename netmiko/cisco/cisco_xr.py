@@ -105,18 +105,14 @@ class CiscoXrBase(CiscoBaseConnection):
         if comment and confirm:
             raise ValueError("Invalid arguments supplied to XR commit")
 
-        label = str(label)
         error_marker = "Failed to"
         alt_error_marker = "One or more commits have occurred from other"
 
-        # Select proper command string based on arguments provided
-        if label:
+        if label := label:
             if comment:
                 command_string = f"commit label {label} comment {comment}"
             elif confirm:
-                command_string = "commit label {} confirmed {}".format(
-                    label, str(confirm_delay)
-                )
+                command_string = f"commit label {label} confirmed {str(confirm_delay)}"
             else:
                 command_string = f"commit label {label}"
         elif confirm:
@@ -228,9 +224,8 @@ class CiscoXrFileTransfer(CiscoFileTransfer):
         Sat Mar  3 17:49:03.596 UTC
         c84843f0030efd44b01343fdb8c2e801
         """
-        match = re.search(pattern, md5_output, flags=re.M)
-        if match:
-            return match.group(1)
+        if match := re.search(pattern, md5_output, flags=re.M):
+            return match[1]
         else:
             raise ValueError(f"Invalid output from MD5 command: {md5_output}")
 

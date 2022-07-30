@@ -8,7 +8,7 @@ class NetAppcDotSSH(NoEnable, BaseConnection):
     def session_preparation(self) -> None:
         """Prepare the session after the connection has been established."""
         self.set_base_prompt()
-        cmd = self.RETURN + "rows 0" + self.RETURN
+        cmd = f"{self.RETURN}rows 0{self.RETURN}"
         self.disable_paging(command=cmd)
 
     def send_command_with_y(self, *args: Any, **kwargs: Any) -> str:

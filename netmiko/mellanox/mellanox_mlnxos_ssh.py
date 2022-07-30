@@ -66,12 +66,9 @@ class MellanoxMlnxosSSH(CiscoSSHConnection):
         """
         output = ""
         check_count = 12
-        while check_count >= 0:
-            if self.check_config_mode():
-                self.write_channel(self.normalize_cmd(exit_config))
-                output += self.read_until_pattern(pattern=pattern)
-            else:
-                break
+        while check_count >= 0 and self.check_config_mode():
+            self.write_channel(self.normalize_cmd(exit_config))
+            output += self.read_until_pattern(pattern=pattern)
             check_count -= 1
 
         # One last check for whether we successfully exited config mode

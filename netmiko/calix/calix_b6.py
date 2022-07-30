@@ -38,7 +38,7 @@ class CalixB6Base(CiscoSSHConnection):
         start = time.time()
         login_timeout = 20
         while time.time() - start < login_timeout:
-            output = self.read_channel() if not new_data else new_data
+            output = new_data or self.read_channel()
             new_data = ""
             if output:
                 if "login as:" in output:
@@ -90,11 +90,7 @@ class CalixB6SSH(CalixB6Base):
         """Prepare for Paramiko SSH connection."""
         # Create instance of SSHClient object
         # If not using SSH keys, we use noauth
-        if not self.use_keys:
-            remote_conn_pre: SSHClient = SSHClient_noauth()
-        else:
-            remote_conn_pre = SSHClient()
-
+        remote_conn_pre = SSHClient() if self.use_keys else SSHClient_noauth()
         # Load host_keys for better SSH security
         if self.system_host_keys:
             remote_conn_pre.load_system_host_keys()

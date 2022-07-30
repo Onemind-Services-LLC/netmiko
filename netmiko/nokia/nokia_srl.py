@@ -91,10 +91,9 @@ class NokiaSrlSSH(BaseConnection, NoEnable):
     def commit(self) -> str:
         """Commit changes by using 'commit stay'."""
         cmd = "commit stay"
-        output = self._send_command_str(
+        return self._send_command_str(
             command_string=cmd, strip_prompt=False, strip_command=False
         )
-        return output
 
     def save_config(
         self,
@@ -135,18 +134,16 @@ class NokiaSrlSSH(BaseConnection, NoEnable):
         """Discard changes made in candidate private mode"""
         log.warning("Uncommitted changes will be discarted!")
         cmd = "discard stay"
-        output = self._send_command_str(
+        return self._send_command_str(
             command_string=cmd, strip_prompt=False, strip_command=False
         )
-        return output
 
     def _running_mode(self) -> str:
         """Enter running mode"""
         cmd = "enter running"
-        output = self._send_command_str(
+        return self._send_command_str(
             command_string=cmd, strip_prompt=False, strip_command=False
         )
-        return output
 
     def _has_uncommitted_changes(self, prompt: str) -> bool:
         """
@@ -162,4 +159,4 @@ class NokiaSrlSSH(BaseConnection, NoEnable):
         changes to the running datastore.
         """
         matches = re.search(r"\n--{( | \* | \+ | \+\* | \!\+ | \!\* )candidate", prompt)
-        return True if matches and "*" in matches.group() else False
+        return bool(matches and "*" in matches.group())

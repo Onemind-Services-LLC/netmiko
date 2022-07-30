@@ -33,7 +33,7 @@ def read_csv(device):
 
 
 def filter_versions(entries):
-    patches = dict()
+    patches = {}
     for entry in entries:
         version = entry["netmiko_version"]
         dot_pos = version.rfind(".")
@@ -92,7 +92,7 @@ perf_report_template = """
 def generate_report():
     template = jinja2.Template(perf_report_template)
     graphs_path = Path.cwd() / "graphs"
-    graph_files = ["graphs/" + item.name for item in graphs_path.iterdir()]
+    graph_files = [f"graphs/{item.name}" for item in graphs_path.iterdir()]
     report_file = Path.cwd() / "performance_report.md"
     with report_file.open("w") as out_file:
         out_file.writelines(template.render({"graphs": graph_files}))

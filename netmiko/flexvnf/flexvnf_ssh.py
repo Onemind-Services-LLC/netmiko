@@ -33,7 +33,7 @@ class FlexvnfSSH(NoEnable, BaseConnection):
             if re.search(r"admin@", cur_prompt) or re.search(
                 r"\$$", cur_prompt.strip()
             ):
-                self.write_channel("cli" + self.RETURN)
+                self.write_channel(f"cli{self.RETURN}")
                 time.sleep(0.3 * delay_factor)
                 self.clear_buffer()
                 break
@@ -127,7 +127,7 @@ class FlexvnfSSH(NoEnable, BaseConnection):
             commit_marker = "Validation complete"
         elif confirm:
             if confirm_delay:
-                command_string = "commit confirmed " + str(confirm_delay)
+                command_string = f"commit confirmed {str(confirm_delay)}"
             else:
                 command_string = "commit confirmed"
             commit_marker = "commit confirmed will be automatically rolled back in"
@@ -137,7 +137,7 @@ class FlexvnfSSH(NoEnable, BaseConnection):
             if '"' in comment:
                 raise ValueError("Invalid comment contains double quote")
             comment = f'"{comment}"'
-            command_string += " comment " + comment
+            command_string += f" comment {comment}"
 
         if and_quit:
             command_string += " and-quit"
@@ -199,7 +199,11 @@ class FlexvnfSSH(NoEnable, BaseConnection):
         response_list = a_string.split(self.RESPONSE_RETURN)
         last_line = response_list[0]
 
-        for pattern in strings_to_strip:
-            if re.search(pattern, last_line):
-                return self.RESPONSE_RETURN.join(response_list[:-1])
-        return a_string
+        return next(
+            (
+                self.RESPONSE_RETURN.join(response_list[:-1])
+                for pattern in strings_to_strip
+                if re.search(pattern, last_line)
+            ),
+            a_string,
+        )

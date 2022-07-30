@@ -27,7 +27,7 @@ class SophosSfosSSH(NoEnable, NoConfig, CiscoSSHConnection):
 
             Select Menu Number [0-7]:
         """
-        self.write_channel("4" + self.RETURN)
+        self.write_channel(f"4{self.RETURN}")
         self._test_channel_read(pattern=r"[console>]")
         self.set_base_prompt()
         # Clear the read buffer

@@ -63,10 +63,9 @@ class NokiaSros(BaseConnection):
     def set_base_prompt(self, *args: Any, **kwargs: Any) -> str:
         """Remove the > when navigating into the different config level."""
         cur_base_prompt = super().set_base_prompt(*args, **kwargs)
-        match = re.search(r"\*?(.*?)(>.*)*#", cur_base_prompt)
-        if match:
+        if match := re.search(r"\*?(.*?)(>.*)*#", cur_base_prompt):
             # strip off >... from base_prompt; strip off leading *
-            self.base_prompt: str = match.group(1)
+            self.base_prompt: str = match[1]
 
         return self.base_prompt
 
@@ -98,9 +97,7 @@ class NokiaSros(BaseConnection):
 
     def check_enable_mode(self, check_string: str = "in admin mode") -> bool:
         """Check if in enable mode."""
-        cmd = "enable"
-        if "@" not in self.base_prompt:
-            cmd = "enable-admin"
+        cmd = "enable-admin" if "@" not in self.base_prompt else "enable"
         self.write_channel(self.normalize_cmd(cmd))
         output = self.read_until_prompt_or_pattern(
             pattern="ssword", read_entire_line=True
@@ -145,9 +142,7 @@ class NokiaSros(BaseConnection):
             self.write_channel(self.normalize_cmd(cmd))
             if self.global_cmd_verify is not False:
                 output += self.read_until_pattern(pattern=re.escape(cmd))
-                output += self.read_until_prompt(read_entire_line=True)
-            else:
-                output += self.read_until_prompt(read_entire_line=True)
+            output += self.read_until_prompt(read_entire_line=True)
         if self.check_config_mode():
             raise ValueError("Failed to exit configuration mode")
         return output
@@ -179,7 +174,7 @@ class NokiaSros(BaseConnection):
         """Model driven CLI requires you not exit from configuration mode."""
         if exit_config_mode is None:
             # Set to False if model-driven CLI
-            exit_config_mode = False if "@" in self.base_prompt else True
+            exit_config_mode = "@" not in self.base_prompt
         return super().send_config_set(
             config_commands=config_commands, exit_config_mode=exit_config_mode, **kwargs
         )
@@ -207,9 +202,7 @@ class NokiaSros(BaseConnection):
         # Make sure you read until you detect the command echo (avoid getting out of sync)
         if self.global_cmd_verify is not False:
             output += self.read_until_pattern(pattern=re.escape(exit_cmd))
-            output += self.read_until_prompt(read_entire_line=True)
-        else:
-            output += self.read_until_prompt(read_entire_line=True)
+        output += self.read_until_prompt(read_entire_line=True)
         return output
 
     def _discard(self) -> str:
@@ -229,16 +222,15 @@ class NokiaSros(BaseConnection):
     def strip_prompt(self, *args: Any, **kwargs: Any) -> str:
         """Strip prompt from the output."""
         output = super().strip_prompt(*args, **kwargs)
-        if "@" in self.base_prompt:
-            # Remove Nokia context prompt too
-            output_list = output.rstrip().splitlines()
-            last_line = output_list[-1]
-            other_lines = output_list[:-1]
-            last_line = nokia_context_filter(last_line)
-            output_list = other_lines + [last_line]
-            return "\n".join(output_list).rstrip()
-        else:
+        if "@" not in self.base_prompt:
             return output
+        # Remove Nokia context prompt too
+        output_list = output.rstrip().splitlines()
+        last_line = output_list[-1]
+        other_lines = output_list[:-1]
+        last_line = nokia_context_filter(last_line)
+        output_list = other_lines + [last_line]
+        return "\n".join(output_list).rstrip()
 
     def cleanup(self, command: str = "logout") -> None:
         """Gracefully exit the SSH session."""
@@ -305,20 +297,22 @@ class NokiaSrosFileTransfer(BaseFileTransfer):
 
         # Sample text for search_pattern.
         # "               3 Dir(s)               961531904 bytes free."
-        remote_cmd = self._file_cmd_prefix() + "file dir {}".format(self.file_system)
+        remote_cmd = self._file_cmd_prefix() + f"file dir {self.file_system}"
         remote_output = self.ssh_ctl_chan._send_command_str(remote_cmd)
         match = re.search(search_pattern, remote_output)
         assert match is not None
-        return int(match.group(1))
+        return int(match[1])
 
     def check_file_exists(self, remote_cmd: str = "") -> bool:
         """Check if destination file exists (returns boolean)."""
 
         if self.direction == "put":
             if not remote_cmd:
-                remote_cmd = self._file_cmd_prefix() + "file dir {}/{}".format(
-                    self.file_system, self.dest_file
+                remote_cmd = (
+                    self._file_cmd_prefix()
+                    + f"file dir {self.file_system}/{self.dest_file}"
                 )
+
             dest_file_name = self.dest_file.replace("\\", "/").split("/")[-1]
             remote_out = self.ssh_ctl_chan.send_command(remote_cmd)
             if "File Not Found" in remote_out:
@@ -345,9 +339,11 @@ class NokiaSrosFileTransfer(BaseFileTransfer):
             else:
                 raise ValueError("Unexpected value for self.direction")
         if not remote_cmd:
-            remote_cmd = self._file_cmd_prefix() + "file dir {}/{}".format(
-                self.file_system, remote_file
+            remote_cmd = (
+                self._file_cmd_prefix()
+                + f"file dir {self.file_system}/{remote_file}"
             )
+
         remote_out = self.ssh_ctl_chan._send_command_str(remote_cmd)
 
         if "File Not Found" in remote_out:
@@ -357,14 +353,11 @@ class NokiaSrosFileTransfer(BaseFileTransfer):
         # Parse dir output for filename. Output format is:
         # "10/16/2019  10:00p                6738 {dest_file_name}"
 
-        pattern = r"\S+\s+\S+\s+(\d+)\s+{}".format(re.escape(dest_file_name))
-        match = re.search(pattern, remote_out)
-
-        if not match:
+        pattern = f"\S+\s+\S+\s+(\d+)\s+{re.escape(dest_file_name)}"
+        if match := re.search(pattern, remote_out):
+            return int(match[1])
+        else:
             raise ValueError("Filename entry not found in dir output")
-
-        file_size = int(match.group(1))
-        return file_size
 
     def verify_file(self) -> bool:
         """Verify the file has been transferred correctly based on filesize."""

@@ -42,7 +42,7 @@ def read_csv(device):
 
 
 def filter_versions(entries):
-    patches = dict()
+    patches = {}
     for entry in entries:
         version = entry["version"]
         dot_pos = version.rfind(".")
@@ -64,7 +64,7 @@ def generate_graph(device_name: str, params: Dict) -> None:
     driver = device_dict.pop("driver")
     device_type = netmiko_scrapli_platform[str(driver)]
 
-    if device_name == "cisco1":
+    if device == "cisco1":
         device_type = "cisco_ios"
     outfile = f"netmiko_scrapli_{device_type}.svg"
     entries = read_csv(device)
@@ -77,15 +77,24 @@ def generate_graph(device_name: str, params: Dict) -> None:
     scrapli_results = []
     for v in entries:
         if v["version"] == netmiko_version:
-            netmiko_results.append(convert_time(v["connect"]))
-            netmiko_results.append(convert_time(v["send_command_simple"]))
-            netmiko_results.append(convert_time(v["send_config_simple"]))
-            netmiko_results.append(convert_time(v["send_config_large_acl"]))
+            netmiko_results.extend(
+                (
+                    convert_time(v["connect"]),
+                    convert_time(v["send_command_simple"]),
+                    convert_time(v["send_config_simple"]),
+                    convert_time(v["send_config_large_acl"]),
+                )
+            )
+
         if v["version"] == scrapli_version:
-            scrapli_results.append(convert_time(v["connect"]))
-            scrapli_results.append(convert_time(v["send_command_simple"]))
-            scrapli_results.append(convert_time(v["send_config_simple"]))
-            scrapli_results.append(convert_time(v["send_config_large_acl"]))
+            scrapli_results.extend(
+                (
+                    convert_time(v["connect"]),
+                    convert_time(v["send_command_simple"]),
+                    convert_time(v["send_config_simple"]),
+                    convert_time(v["send_config_large_acl"]),
+                )
+            )
 
     print(netmiko_results)
     print(scrapli_results)
@@ -116,14 +125,17 @@ def generate_report():
     template = jinja2.Template(perf_report_template)
     graphs_path = Path.cwd() / "graphs_netmiko_scrapli"
     graph_files = [
-        "graphs_netmiko_scrapli/" + item.name for item in graphs_path.iterdir()
+        f"graphs_netmiko_scrapli/{item.name}" for item in graphs_path.iterdir()
     ]
+
     report_file = Path.cwd() / "performance_netmiko_scrapli.md"
     with report_file.open("w") as out_file:
-        j2_vars = {}
-        j2_vars["graphs"] = graph_files
-        j2_vars["netmiko_version"] = "4.1.0"
-        j2_vars["scrapli_version"] = "2022.1.30.post1"
+        j2_vars = {
+            "graphs": graph_files,
+            "netmiko_version": "4.1.0",
+            "scrapli_version": "2022.1.30.post1",
+        }
+
         out_file.writelines(template.render(**j2_vars))
 
 

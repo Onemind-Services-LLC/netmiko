@@ -52,8 +52,7 @@ class RaisecomRoapSSH(RaisecomRoapBase):
         time.sleep(delay_factor * 0.5)
         output = ""
         while i <= 12:
-            output = self.read_channel()
-            if output:
+            if output := self.read_channel():
                 if "Login:" in output:
                     self.write_channel(self.username + self.RETURN)
                 elif "Password:" in output:

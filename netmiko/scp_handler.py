@@ -96,14 +96,13 @@ class BaseFileTransfer(object):
             or "cisco_xe" in ssh_conn.device_type
             or "cisco_xr" in ssh_conn.device_type
         )
-        if not file_system:
-            if auto_flag:
-                self.file_system = self.ssh_ctl_chan._autodetect_fs()
-            else:
-                raise ValueError("Destination file system not specified")
-        else:
+        if file_system:
             self.file_system = file_system
 
+        elif auto_flag:
+            self.file_system = self.ssh_ctl_chan._autodetect_fs()
+        else:
+            raise ValueError("Destination file system not specified")
         if direction == "put":
             self.source_md5 = self.file_md5(source_file) if hash_supported else None
             self.file_size = os.stat(source_file).st_size
@@ -147,16 +146,17 @@ class BaseFileTransfer(object):
         """Return space available on remote device."""
         remote_cmd = f"dir {self.file_system}"
         remote_output = self.ssh_ctl_chan._send_command_str(remote_cmd)
-        match = re.search(search_pattern, remote_output)
-        if match:
-            if "kbytes" in match.group(0) or "Kbytes" in match.group(0):
-                return int(match.group(1)) * 1000
-            return int(match.group(1))
-        else:
-            msg = (
-                f"pattern: {search_pattern} not detected in output:\n\n{remote_output}"
+        if match := re.search(search_pattern, remote_output):
+            return (
+                int(match[1]) * 1000
+                if "kbytes" in match[0] or "Kbytes" in match[0]
+                else int(match[1])
             )
-            raise ValueError(msg)
+
+        msg = (
+            f"pattern: {search_pattern} not detected in output:\n\n{remote_output}"
+        )
+        raise ValueError(msg)
 
     def _remote_space_available_unix(self, search_pattern: str = "") -> int:
         """Return space available on *nix system (BSD/Linux)."""
@@ -178,16 +178,12 @@ class BaseFileTransfer(object):
 
         if "Filesystem" not in header_line or "Avail" not in header_line.split()[3]:
             # Filesystem  1K-blocks  Used   Avail Capacity  Mounted on
-            msg = "Parsing error, unexpected output from {}:\n{}".format(
-                remote_cmd, remote_output
-            )
+            msg = f"Parsing error, unexpected output from {remote_cmd}:\n{remote_output}"
             raise ValueError(msg)
 
         space_available = filesystem_line.split()[3]
         if not re.search(r"^\d+$", space_available):
-            msg = "Parsing error, unexpected output from {}:\n{}".format(
-                remote_cmd, remote_output
-            )
+            msg = f"Parsing error, unexpected output from {remote_cmd}:\n{remote_output}"
             raise ValueError(msg)
 
         self.ssh_ctl_chan._return_cli()
@@ -213,9 +209,7 @@ class BaseFileTransfer(object):
             space_avail = self.remote_space_available(search_pattern=search_pattern)
         elif self.direction == "get":
             space_avail = self.local_space_available()
-        if space_avail > self.file_size:
-            return True
-        return False
+        return space_avail > self.file_size
 
     def check_file_exists(self, remote_cmd: str = "") -> bool:
         """Check if the dest_file already exists on the file system (return boolean)."""
@@ -272,15 +266,13 @@ class BaseFileTransfer(object):
         # Match line containing file name
         assert isinstance(remote_file, str)
         escape_file_name = re.escape(remote_file)
-        pattern = r".*({}).*".format(escape_file_name)
-        match = re.search(pattern, remote_out)
-        if match:
-            line = match.group(0)
-            # Format will be 26  -rw-   6738  Jul 30 2016 19:49:50 -07:00  filename
-            file_size = line.split()[2]
-        else:
+        pattern = f".*({escape_file_name}).*"
+        if not (match := re.search(pattern, remote_out)):
             raise IOError("Unable to parse 'dir' output in remote_file_size method")
 
+        line = match[0]
+        # Format will be 26  -rw-   6738  Jul 30 2016 19:49:50 -07:00  filename
+        file_size = line.split()[2]
         if "Error opening" in remote_out or "No such file or directory" in remote_out:
             raise IOError("Unable to find file on remote system")
         else:
@@ -309,11 +301,10 @@ class BaseFileTransfer(object):
             raise IOError("Unable to find file on remote system")
 
         escape_file_name = re.escape(remote_file)
-        pattern = r"^.* ({}).*$".format(escape_file_name)
-        match = re.search(pattern, remote_out, flags=re.M)
-        if match:
+        pattern = f"^.* ({escape_file_name}).*$"
+        if match := re.search(pattern, remote_out, flags=re.M):
             # Format: -rw-r--r--  1 pyclass  wheel  12 Nov  5 19:07 /var/tmp/test3.txt
-            line = match.group(0)
+            line = match[0]
             file_size = line.split()[4]
             return int(file_size)
 
@@ -352,9 +343,8 @@ class BaseFileTransfer(object):
         .MD5 of flash:file_name Done!
         verify /md5 (flash:file_name) = 410db2a7015eaa42b1fe71f1bf3d59a2
         """
-        match = re.search(pattern, md5_output)
-        if match:
-            return match.group(1)
+        if match := re.search(pattern, md5_output):
+            return match[1]
         else:
             raise ValueError(f"Invalid output from MD5 command: {md5_output}")
 

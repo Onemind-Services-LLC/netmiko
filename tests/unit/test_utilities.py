@@ -417,7 +417,7 @@ def test_nokia_context_filter():
         results.append(out)
 
     # All strings in results should be null-string
-    assert any(results) is False
+    assert not any(results)
 
     # Create a case that won't be stripped
     test_case = 'foo[show router "Base" bgp]'

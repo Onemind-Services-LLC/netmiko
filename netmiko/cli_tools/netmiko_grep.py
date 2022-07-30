@@ -98,9 +98,12 @@ def parse_arguments(args):
     )
     parser.add_argument("--version", help="Display version", action="store_true")
     cli_args = parser.parse_args(args)
-    if not cli_args.list_devices and not cli_args.version:
-        if not cli_args.devices or not cli_args.pattern:
-            parser.error("Grep pattern or devices not specified.")
+    if (
+        not cli_args.list_devices
+        and not cli_args.version
+        and (not cli_args.devices or not cli_args.pattern)
+    ):
+        parser.error("Grep pattern or devices not specified.")
     return cli_args
 
 
@@ -112,24 +115,20 @@ def main(args):
     start_time = datetime.now()
     cli_args = parse_arguments(args)
 
-    cli_username = cli_args.username if cli_args.username else None
+    cli_username = cli_args.username or None
     cli_password = getpass() if cli_args.password else None
     cli_secret = getpass("Enable secret: ") if cli_args.secret else None
 
-    version = cli_args.version
-    if version:
-        print("netmiko-grep v{}".format(__version__))
+    if version := cli_args.version:
+        print(f"netmiko-grep v{__version__}")
         return 0
-    list_devices = cli_args.list_devices
-    if list_devices:
+    if list_devices := cli_args.list_devices:
         my_devices = load_devices()
         display_inventory(my_devices)
         return 0
 
     cli_command = cli_args.cmd
-    cmd_arg = False
-    if cli_command:
-        cmd_arg = True
+    cmd_arg = bool(cli_command)
     device_or_group = cli_args.devices.strip()
     pattern = cli_args.pattern
     use_cached_files = cli_args.use_cache
@@ -206,15 +205,14 @@ def main(args):
     if cli_args.display_runtime:
         print("Total time: {0}".format(datetime.now() - start_time))
 
-    if not hide_failed:
-        if failed_devices:
-            print("\n")
-            print("-" * 20)
-            print("Failed devices:")
-            failed_devices.sort()
-            for device_name in failed_devices:
-                print("  {}".format(device_name))
-            print()
+    if not hide_failed and failed_devices:
+        print("\n")
+        print("-" * 20)
+        print("Failed devices:")
+        failed_devices.sort()
+        for device_name in failed_devices:
+            print(f"  {device_name}")
+        print()
     return 0
 
 

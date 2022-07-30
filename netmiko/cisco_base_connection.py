@@ -91,16 +91,15 @@ class CiscoBaseConnection(BaseConnection):
         """Telnet login. Can be username/password or just password."""
         delay_factor = self.select_delay_factor(delay_factor)
 
-        if delay_factor < 1:
-            if not self._legacy_mode and self.fast_cli:
-                delay_factor = 1
+        if delay_factor < 1 and not self._legacy_mode and self.fast_cli:
+            delay_factor = 1
 
         time.sleep(1 * delay_factor)
 
         output = ""
         return_msg = ""
         outer_loops = 3
-        inner_loops = int(max_loops / outer_loops)
+        inner_loops = max_loops // outer_loops
         i = 1
         for _ in range(outer_loops):
             while i <= inner_loops:
@@ -133,7 +132,7 @@ class CiscoBaseConnection(BaseConnection):
                     if re.search(
                         r"initial configuration dialog\? \[yes/no\]: ", output
                     ):
-                        self.write_channel("no" + self.TELNET_RETURN)
+                        self.write_channel(f"no{self.TELNET_RETURN}")
                         time.sleep(0.5 * delay_factor)
                         count = 0
                         while count < 15:
@@ -149,11 +148,7 @@ class CiscoBaseConnection(BaseConnection):
                     if re.search(r"assword required, but none set", output):
                         assert self.remote_conn is not None
                         self.remote_conn.close()
-                        msg = (
-                            "Login failed - Password required, but none set: {}".format(
-                                self.host
-                            )
-                        )
+                        msg = f"Login failed - Password required, but none set: {self.host}"
                         raise NetmikoAuthenticationException(msg)
 
                     # Check if proper data received
@@ -209,23 +204,21 @@ class CiscoBaseConnection(BaseConnection):
         if not self.check_enable_mode():
             raise ValueError("Must be in enable mode to auto-detect the file-system.")
         output = self._send_command_str(cmd)
-        match = re.search(pattern, output)
-        if match:
-            file_system = match.group(1)
+        if match := re.search(pattern, output):
+            file_system = match[1]
             # Test file_system
             cmd = f"dir {file_system}"
             output = self._send_command_str(cmd)
             if "% Invalid" in output or "%Error:" in output:
                 raise ValueError(
-                    "An error occurred in dynamically determining remote file "
-                    "system: {} {}".format(cmd, output)
+                    f"An error occurred in dynamically determining remote file system: {cmd} {output}"
                 )
+
             else:
                 return file_system
 
         raise ValueError(
-            "An error occurred in dynamically determining remote file "
-            "system: {} {}".format(cmd, output)
+            f"An error occurred in dynamically determining remote file system: {cmd} {output}"
         )
 
     def save_config(

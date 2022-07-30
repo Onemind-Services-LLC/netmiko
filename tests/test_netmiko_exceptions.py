@@ -7,7 +7,7 @@ from netmiko import NetmikoTimeoutException
 from test_utils import parse_yaml
 
 PWD = path.dirname(path.realpath(__file__))
-DEVICE_DICT = parse_yaml(PWD + "/etc/test_devices_exc.yml")
+DEVICE_DICT = parse_yaml(f"{PWD}/etc/test_devices_exc.yml")
 
 
 def test_valid_conn():
@@ -65,8 +65,8 @@ def test_dns_fail_timeout():
 
 
 def test_auth_timeout():
-    assert True
+    pass
 
 
 def test_banner_timeout():
-    assert True
+    pass

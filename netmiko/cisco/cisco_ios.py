@@ -108,7 +108,7 @@ class InLineTransfer(CiscoIosFileTransfer):
             raise ValueError(
                 "Destination file must be specified for InlineTransfer operations."
             )
-        if hash_supported is False:
+        if not hash_supported:
             raise ValueError("hash_supported=False is not supported for InLineTransfer")
 
         if source_file and source_config:
@@ -121,9 +121,8 @@ class InLineTransfer(CiscoIosFileTransfer):
             raise NotImplementedError(
                 "Progress bar is not supported on inline transfers."
             )
-        else:
-            self.progress = progress
-            self.progress4 = progress4
+        self.progress = progress
+        self.progress4 = progress4
 
         self.ssh_ctl_chan = ssh_conn
         self.source_file = source_file
@@ -138,11 +137,7 @@ class InLineTransfer(CiscoIosFileTransfer):
         self.dest_file = dest_file
         self.direction = direction
 
-        if not file_system:
-            self.file_system = self.ssh_ctl_chan._autodetect_fs()
-        else:
-            self.file_system = file_system
-
+        self.file_system = file_system or self.ssh_ctl_chan._autodetect_fs()
         self.socket_timeout = socket_timeout
 
     @staticmethod
@@ -193,11 +188,11 @@ class InLineTransfer(CiscoIosFileTransfer):
         return output
 
     def _exit_tcl_mode(self) -> str:
-        TCL_EXIT = "tclquit"
         self.ssh_ctl_chan.write_channel("\r")
         time.sleep(1)
         output = self.ssh_ctl_chan.read_channel()
         if "(tcl)" in output:
+            TCL_EXIT = "tclquit"
             self.ssh_ctl_chan.write_channel(TCL_EXIT + "\r")
         time.sleep(1)
         output += self.ssh_ctl_chan.read_channel()
@@ -214,7 +209,7 @@ class InLineTransfer(CiscoIosFileTransfer):
 
     def file_md5(self, file_name: str, add_newline: bool = False) -> str:
         """Compute MD5 hash of file."""
-        if add_newline is True:
+        if add_newline:
             raise ValueError(
                 "add_newline argument is not supported for inline transfers."
             )
@@ -231,9 +226,10 @@ class InLineTransfer(CiscoIosFileTransfer):
 
     def put_file(self) -> None:
         curlybrace = r"{"
-        TCL_FILECMD_ENTER = 'puts [open "{}{}" w+] {}'.format(
-            self.file_system, self.dest_file, curlybrace
+        TCL_FILECMD_ENTER = (
+            f'puts [open "{self.file_system}{self.dest_file}" w+] {curlybrace}'
         )
+
         TCL_FILECMD_EXIT = "}"
 
         if self.source_file:

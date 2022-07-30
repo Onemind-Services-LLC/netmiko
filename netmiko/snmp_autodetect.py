@@ -20,6 +20,7 @@ SNMPDetect class defaults to SNMPv3
 Note, pysnmp is a required dependency for SNMPDetect and is intentionally not included in
 netmiko requirements. So installation of pysnmp might be required.
 """
+
 from typing import Optional, Dict
 from typing.re import Pattern
 import re
@@ -116,12 +117,12 @@ SNMP_MAPPER_BASE = {
     },
 }
 
-# Ensure all SNMP device types are supported by Netmiko
-SNMP_MAPPER = {}
 std_device_types = list(CLASS_MAPPER.keys())
-for device_type in std_device_types:
-    if SNMP_MAPPER_BASE.get(device_type):
-        SNMP_MAPPER[device_type] = SNMP_MAPPER_BASE[device_type]
+SNMP_MAPPER = {
+    device_type: SNMP_MAPPER_BASE[device_type]
+    for device_type in std_device_types
+    if SNMP_MAPPER_BASE.get(device_type)
+}
 
 
 class SNMPDetect(object):
@@ -193,7 +194,7 @@ class SNMPDetect(object):
     ) -> None:
 
         # Check that the SNMP version is matching predefined type or raise ValueError
-        if snmp_version == "v1" or snmp_version == "v2c":
+        if snmp_version in {"v1", "v2c"}:
             if not community:
                 raise ValueError("SNMP version v1/v2c community must be set.")
         elif snmp_version == "v3":
@@ -216,16 +217,14 @@ class SNMPDetect(object):
         }
         if auth_proto not in self._snmp_v3_authentication.keys():
             raise ValueError(
-                "SNMP V3 'auth_proto' argument must be one of the following: {}".format(
-                    self._snmp_v3_authentication.keys()
-                )
+                f"SNMP V3 'auth_proto' argument must be one of the following: {self._snmp_v3_authentication.keys()}"
             )
+
         if encrypt_proto not in self._snmp_v3_encryption.keys():
             raise ValueError(
-                "SNMP V3 'encrypt_proto' argument must be one of the following: {}".format(
-                    self._snmp_v3_encryption.keys()
-                )
+                f"SNMP V3 'encrypt_proto' argument must be one of the following: {self._snmp_v3_encryption.keys()}"
             )
+
 
         self.hostname = hostname
         self.snmp_version = snmp_version
@@ -269,9 +268,7 @@ class SNMPDetect(object):
             lookupValues=True,
         )
 
-        if not error_detected and snmp_data[0][1]:
-            return str(snmp_data[0][1])
-        return ""
+        return str(snmp_data[0][1]) if not error_detected and snmp_data[0][1] else ""
 
     def _get_snmpv2c(self, oid: str) -> str:
         """
@@ -298,9 +295,7 @@ class SNMPDetect(object):
             lookupValues=True,
         )
 
-        if not error_detected and snmp_data[0][1]:
-            return str(snmp_data[0][1])
-        return ""
+        return str(snmp_data[0][1]) if not error_detected and snmp_data[0][1] else ""
 
     def _get_snmp(self, oid: str) -> str:
         """Wrapper for generic SNMP call."""
@@ -323,9 +318,7 @@ class SNMPDetect(object):
             The name of the device_type that must be running.
         """
         # Convert SNMP_MAPPER to a list and sort by priority
-        snmp_mapper_orig = []
-        for k, v in SNMP_MAPPER.items():
-            snmp_mapper_orig.append({k: v})
+        snmp_mapper_orig = [{k: v} for k, v in SNMP_MAPPER.items()]
         snmp_mapper_list = sorted(
             snmp_mapper_orig, key=lambda x: list(x.values())[0]["priority"]  # type: ignore
         )

@@ -86,7 +86,7 @@ class CiscoNxosFileTransfer(CiscoFileTransfer):
         self.dest_file = dest_file
         self.direction = direction
 
-        if hash_supported is False:
+        if not hash_supported:
             raise ValueError("hash_supported=False is not supported for NX-OS")
 
         if file_system:
@@ -94,12 +94,12 @@ class CiscoNxosFileTransfer(CiscoFileTransfer):
         else:
             raise ValueError("Destination file system must be specified for NX-OS")
 
-        if direction == "put":
-            self.source_md5 = self.file_md5(source_file)
-            self.file_size = os.stat(source_file).st_size
-        elif direction == "get":
+        if direction == "get":
             self.source_md5 = self.remote_md5(remote_file=source_file)
             self.file_size = self.remote_file_size(remote_file=source_file)
+        elif direction == "put":
+            self.source_md5 = self.file_md5(source_file)
+            self.file_size = os.stat(source_file).st_size
         else:
             raise ValueError("Invalid direction specified")
 
@@ -113,7 +113,7 @@ class CiscoNxosFileTransfer(CiscoFileTransfer):
             if not remote_cmd:
                 remote_cmd = f"dir {self.file_system}{self.dest_file}"
             remote_out = self.ssh_ctl_chan._send_command_str(remote_cmd)
-            search_string = r"{}.*Usage for".format(self.dest_file)
+            search_string = f"{self.dest_file}.*Usage for"
             if "No such file or directory" in remote_out:
                 return False
             elif re.search(search_string, remote_out, flags=re.DOTALL):
@@ -145,10 +145,9 @@ class CiscoNxosFileTransfer(CiscoFileTransfer):
             raise IOError("Unable to find file on remote system")
         # Match line containing file name
         escape_file_name = re.escape(remote_file)
-        pattern = r".*({}).*".format(escape_file_name)
-        match = re.search(pattern, remote_out)
-        if match:
-            file_size = match.group(0)
+        pattern = f".*({escape_file_name}).*"
+        if match := re.search(pattern, remote_out):
+            file_size = match[0]
             file_size = file_size.split()[0]
             return int(file_size)
 

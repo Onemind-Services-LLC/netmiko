@@ -98,13 +98,12 @@ class MikrotikBase(NoEnable, CiscoSSHConnection):
         output = output.lstrip()
         # '[admin@MikroTik] > cmd' then the first newline should be matched
         pattern = rf"^\[.*\] > {re.escape(cmd)}.*${self.RESPONSE_RETURN}"
-        if re.search(pattern, output, flags=re.M):
-            output_lines = re.split(pattern, output, flags=re.M)
-            new_output = output_lines[1:]
-            return self.RESPONSE_RETURN.join(new_output)
-        else:
+        if not re.search(pattern, output, flags=re.M):
             # command_string isn't there; do nothing
             return output
+        output_lines = re.split(pattern, output, flags=re.M)
+        new_output = output_lines[1:]
+        return self.RESPONSE_RETURN.join(new_output)
 
     def set_base_prompt(
         self,

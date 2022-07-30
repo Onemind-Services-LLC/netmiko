@@ -76,9 +76,7 @@ def test_scp_get(scp_fixture_get):
         assert False
     else:
         scp_transfer.get_file()
-        if scp_transfer.check_file_exists():
-            assert True
-        else:
+        if not scp_transfer.check_file_exists():
             assert False
 
 

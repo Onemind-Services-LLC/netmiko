@@ -188,10 +188,9 @@ class PaloAltoPanosBase(NoEnable, BaseConnection):
     def strip_prompt(self, a_string: str) -> str:
         """Strip the trailing router prompt from the output."""
         response_list = a_string.split(self.RESPONSE_RETURN)
-        new_response_list = []
-        for line in response_list:
-            if self.base_prompt not in line:
-                new_response_list.append(line)
+        new_response_list = [
+            line for line in response_list if self.base_prompt not in line
+        ]
 
         output = self.RESPONSE_RETURN.join(new_response_list)
         return self.strip_context_items(output)
@@ -209,11 +208,14 @@ class PaloAltoPanosBase(NoEnable, BaseConnection):
         response_list = a_string.split(self.RESPONSE_RETURN)
         last_line = response_list[-1]
 
-        for pattern in strings_to_strip:
-            if re.search(pattern, last_line):
-                return self.RESPONSE_RETURN.join(response_list[:-1])
-
-        return a_string
+        return next(
+            (
+                self.RESPONSE_RETURN.join(response_list[:-1])
+                for pattern in strings_to_strip
+                if re.search(pattern, last_line)
+            ),
+            a_string,
+        )
 
     def cleanup(self, command: str = "exit") -> None:
         """Gracefully exit the SSH session."""
@@ -234,11 +236,7 @@ class PaloAltoPanosSSH(PaloAltoPanosBase):
         # Create instance of SSHClient object
         # If not using SSH keys, we use noauth
 
-        if not self.use_keys:
-            remote_conn_pre: SSHClient = SSHClient_interactive()
-        else:
-            remote_conn_pre = SSHClient()
-
+        remote_conn_pre = SSHClient() if self.use_keys else SSHClient_interactive()
         # Load host_keys for better SSH security
         if self.system_host_keys:
             remote_conn_pre.load_system_host_keys()

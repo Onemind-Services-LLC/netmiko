@@ -130,11 +130,8 @@ def generate_linux_acl(
     base_addr="",
 ):
     """Well, not really an ACL, but you get the idea."""
-    acl = []
-    for i in range(1, entries + 1):
-        cmd = "head /var/log/messages"
-        acl.append(cmd)
-    return acl
+    cmd = "head /var/log/messages"
+    return [cmd for _ in range(1, entries + 1)]
 
 
 if __name__ == "__main__":

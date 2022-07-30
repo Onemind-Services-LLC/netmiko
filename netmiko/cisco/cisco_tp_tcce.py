@@ -81,8 +81,7 @@ class CiscoTpTcCeSSH(CiscoSSHConnection):
                 expect_string = self.RETURN + expect_string + self.RETURN
                 kwargs.setdefault("expect_string", expect_string)
 
-        output = super().send_command(*args, **kwargs)
-        return output
+        return super().send_command(*args, **kwargs)
 
     def save_config(self, *args: Any, **kwargs: Any) -> str:
         """Not Implemented"""

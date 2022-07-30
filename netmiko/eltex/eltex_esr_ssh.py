@@ -67,9 +67,7 @@ class EltexEsrSSH(CiscoSSHConnection):
         )
 
         if error_marker in output:
-            raise ValueError(
-                "Commit failed with following errors:\n\n{}".format(output)
-            )
+            raise ValueError(f"Commit failed with following errors:\n\n{output}")
         return output
 
     def _confirm(
@@ -97,9 +95,7 @@ class EltexEsrSSH(CiscoSSHConnection):
         )
 
         if error_marker in output:
-            raise ValueError(
-                "Confirm failed with following errors:\n\n{}".format(output)
-            )
+            raise ValueError(f"Confirm failed with following errors:\n\n{output}")
         return output
 
     def _restore(
@@ -128,7 +124,5 @@ class EltexEsrSSH(CiscoSSHConnection):
         )
 
         if error_marker in output:
-            raise ValueError(
-                "Restore failed with following errors:\n\n{}".format(output)
-            )
+            raise ValueError(f"Restore failed with following errors:\n\n{output}")
         return output

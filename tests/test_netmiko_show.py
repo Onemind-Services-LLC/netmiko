@@ -25,10 +25,6 @@ def test_disable_paging(net_connect, commands, expected_responses):
     if net_connect.device_type == "arista_eos":
         # Arista logging buffer gets enormous
         net_connect.send_command("clear logging")
-    elif net_connect.device_type == "arista_eos":
-        # NX-OS logging buffer gets enormous (NX-OS fails when testing very high-latency +
-        # packet loss)
-        net_connect.send_command("clear logging logfile")
     multiple_line_output = net_connect.send_command(
         commands["extended_output"], read_timeout=60
     )
@@ -37,10 +33,8 @@ def test_disable_paging(net_connect, commands, expected_responses):
 
 def test_terminal_width(net_connect, commands, expected_responses):
     """Verify long commands work properly."""
-    wide_command = commands.get("wide_command")
-    if wide_command:
+    if wide_command := commands.get("wide_command"):
         net_connect.send_command(wide_command)
-    assert True
 
 
 def test_ssh_connect(net_connect, commands, expected_responses):

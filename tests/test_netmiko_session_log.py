@@ -25,8 +25,7 @@ def read_session_log(session_file, append=False):
         if append is True:
             line = f.readline().decode()
             assert "Initial file contents" in line
-        log_content = f.read().lstrip()
-        return log_content
+        return f.read().lstrip()
 
 
 def session_action(my_connect, command):
@@ -119,8 +118,8 @@ def test_session_log_secrets(device_slog):
     """Verify session_log does not contain password or secret."""
     conn = ConnectHandler(**device_slog)
     conn.session_log.write("\nTesting password and secret replacement\n")
-    conn.session_log.write("This is my password {}\n".format(conn.password))
-    conn.session_log.write("This is my secret {}\n".format(conn.secret))
+    conn.session_log.write(f"This is my password {conn.password}\n")
+    conn.session_log.write(f"This is my secret {conn.secret}\n")
 
     file_name = device_slog["session_log"]
     with open(file_name, "r") as f:

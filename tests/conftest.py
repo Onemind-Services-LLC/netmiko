@@ -31,7 +31,7 @@ def net_connect(request):
     Return the netmiko connection object
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     conn = ConnectHandler(**device)
@@ -55,13 +55,12 @@ def net_connect_cmd_verify(request):
     Set global_cmd_verify = False
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     device["fast_cli"] = False
     device["global_cmd_verify"] = False
-    conn = ConnectHandler(**device)
-    return conn
+    return ConnectHandler(**device)
 
 
 @pytest.fixture(scope="function")
@@ -73,11 +72,10 @@ def net_connect_newconn(request):
     Force a new connection for each test.
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
-    conn = ConnectHandler(**device)
-    return conn
+    return ConnectHandler(**device)
 
 
 @pytest.fixture()
@@ -87,7 +85,7 @@ def net_connect_cm(request):
     retrieve the find_prompt() data and close the connection.
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     my_prompt = ""
@@ -104,14 +102,13 @@ def net_connect_slog_wr(request):
     Return the netmiko connection object.
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     # Overwrite default session_log location
     device["session_log"] = "SLOG/cisco881_slog_wr.log"
     device["session_log_record_writes"] = True
-    conn = ConnectHandler(**device)
-    return conn
+    return ConnectHandler(**device)
 
 
 @pytest.fixture(scope="module")
@@ -122,7 +119,7 @@ def device_slog(request):
     Return the netmiko device (not connected)
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     # Fictional secret
     device["secret"] = "invalid"
@@ -137,7 +134,7 @@ def expected_responses(request):
     Parse the responses.yml file to get a responses dictionary
     """
     device_under_test = request.config.getoption("test_device")
-    responses = parse_yaml(PWD + "/etc/responses.yml")
+    responses = parse_yaml(f"{PWD}/etc/responses.yml")
     return responses[device_under_test]
 
 
@@ -147,11 +144,11 @@ def commands(request):
     Parse the commands.yml file to get a commands dictionary
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     test_platform = device["device_type"]
 
-    commands_yml = parse_yaml(PWD + "/etc/commands.yml")
+    commands_yml = parse_yaml(f"{PWD}/etc/commands.yml")
 
     # Nokia SR-OS driver is overloaded with both classical-CLI and MD-CLI
     # Swap out the commands to be the MD-CLI commands
@@ -171,9 +168,9 @@ def delete_file_nxos(ssh_conn, dest_file_system, dest_file):
     if not dest_file:
         raise ValueError("Invalid dest file specified")
 
-    full_file_name = "{}{}".format(dest_file_system, dest_file)
+    full_file_name = f"{dest_file_system}{dest_file}"
 
-    cmd = "delete {}".format(full_file_name)
+    cmd = f"delete {full_file_name}"
     output = ssh_conn.send_command(cmd, expect_string=r"Do you want to delete")
     if "yes/no/abort" in output and dest_file in output:
         output += ssh_conn.send_command(
@@ -243,7 +240,7 @@ def delete_file_dellos10(ssh_conn, dest_file_system, dest_file):
     if not dest_file:
         raise ValueError("Invalid dest file specified")
 
-    cmd = "delete home://{}".format(dest_file)
+    cmd = f"delete home://{dest_file}"
     output = ssh_conn.send_command_timing(cmd)
     if "Proceed to delete" in output:
         output = ssh_conn.send_command_timing("yes")
@@ -254,8 +251,8 @@ def delete_file_dellos10(ssh_conn, dest_file_system, dest_file):
 
 def delete_file_generic(ssh_conn, dest_file_system, dest_file):
     """Delete a remote file for a Junos device."""
-    full_file_name = "{}/{}".format(dest_file_system, dest_file)
-    cmd = "rm {}".format(full_file_name)
+    full_file_name = f"{dest_file_system}/{dest_file}"
+    cmd = f"rm {full_file_name}"
     output = ssh_conn._enter_shell()
     output += ssh_conn.send_command_timing(cmd, strip_command=False, strip_prompt=False)
     output += ssh_conn._return_cli()
@@ -264,40 +261,38 @@ def delete_file_generic(ssh_conn, dest_file_system, dest_file):
 
 def delete_file_ciena_saos(ssh_conn, dest_file_system, dest_file):
     """Delete a remote file for a ciena device."""
-    full_file_name = "{}/{}".format(dest_file_system, dest_file)
-    cmd = "file rm {}".format(full_file_name)
-    output = ssh_conn.send_command_timing(cmd, strip_command=False, strip_prompt=False)
-    return output
+    full_file_name = f"{dest_file_system}/{dest_file}"
+    cmd = f"file rm {full_file_name}"
+    return ssh_conn.send_command_timing(
+        cmd, strip_command=False, strip_prompt=False
+    )
 
 
 def delete_file_nokia_sros(ssh_conn, dest_file_system, dest_file):
     """Delete a remote file for a Nokia SR OS device."""
-    full_file_name = "{}/{}".format(dest_file_system, dest_file)
-    cmd = "file delete {} force".format(full_file_name)
-    cmd_prefix = ""
-    if "@" in ssh_conn.base_prompt:
-        cmd_prefix = "//"
-    ssh_conn.send_command(cmd_prefix + "environment no more")
-    output = ssh_conn.send_command_timing(
+    full_file_name = f"{dest_file_system}/{dest_file}"
+    cmd = f"file delete {full_file_name} force"
+    cmd_prefix = "//" if "@" in ssh_conn.base_prompt else ""
+    ssh_conn.send_command(f"{cmd_prefix}environment no more")
+    return ssh_conn.send_command_timing(
         cmd_prefix + cmd, strip_command=False, strip_prompt=False
     )
-    return output
 
 
 def delete_file_extreme_exos(ssh_conn, dest_file_system, dest_file):
     """Delete a remote file for an Extreme EXOS device."""
-    full_file_name = "{}/{}".format(dest_file_system, dest_file)
-    cmd = "rm {}".format(full_file_name)
-    output = ssh_conn.send_command_timing(cmd, strip_command=False, strip_prompt=False)
-    return output
+    full_file_name = f"{dest_file_system}/{dest_file}"
+    cmd = f"rm {full_file_name}"
+    return ssh_conn.send_command_timing(
+        cmd, strip_command=False, strip_prompt=False
+    )
 
 
 def delete_file_mikrotik_routeros(ssh_conn, dest_file_system, dest_file):
     """Delete a remote file for an Extreme EXOS device."""
-    full_file_name = "{}/{}".format(dest_file_system, dest_file)
-    cmd = "/file remove {}".format(full_file_name)
-    output = ssh_conn.send_command(cmd, strip_command=False, strip_prompt=False)
-    return output
+    full_file_name = f"{dest_file_system}/{dest_file}"
+    cmd = f"/file remove {full_file_name}"
+    return ssh_conn.send_command(cmd, strip_command=False, strip_prompt=False)
 
 
 @pytest.fixture(scope="module")
@@ -320,7 +315,7 @@ def scp_fixture(request):
         f.write("logging buffered 10000\n")
 
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     ssh_conn = ConnectHandler(**device)
@@ -366,7 +361,7 @@ def scp_fixture_get(request):
     """
     platform_args = get_platform_args()
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     ssh_conn = ConnectHandler(**device)
@@ -410,7 +405,7 @@ def tcl_fixture(request):
         f.write("no logging console\n")
 
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     platform = device["device_type"]
@@ -446,7 +441,7 @@ def ssh_autodetect(request):
     return (ssh_conn, real_device_type)
     """
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     my_device_type = device.pop("device_type")
@@ -475,7 +470,7 @@ def scp_file_transfer(request):
         f.write("logging buffered 10000\n")
 
     device_under_test = request.config.getoption("test_device")
-    test_devices = parse_yaml(PWD + "/etc/test_devices.yml")
+    test_devices = parse_yaml(f"{PWD}/etc/test_devices.yml")
     device = test_devices[device_under_test]
     device["verbose"] = False
     ssh_conn = ConnectHandler(**device)

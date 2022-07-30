@@ -36,13 +36,9 @@ class ExtremeExosBase(NoConfig, CiscoSSHConnection):
             * testhost.5 #
         """
         cur_base_prompt = super().set_base_prompt(*args, **kwargs)
-        # Strip off any leading * or whitespace chars; strip off trailing period and digits
-        match = re.search(r"[\*\s]*(.*)\.\d+", cur_base_prompt)
-        if match:
-            self.base_prompt = match.group(1)
-            return self.base_prompt
-        else:
-            return self.base_prompt
+        if match := re.search(r"[\*\s]*(.*)\.\d+", cur_base_prompt):
+            self.base_prompt = match[1]
+        return self.base_prompt
 
     def send_command(
         self, *args: Any, **kwargs: Any
@@ -115,12 +111,10 @@ class ExtremeExosFileTransfer(BaseFileTransfer):
             or "No such file or directory" in remote_output
         ):
             msg = f"Invalid file_system: {self.file_system}"
+        elif match := re.search(search_pattern, remote_output):
+            return int(match[1])
         else:
-            match = re.search(search_pattern, remote_output)
-            if match:
-                return int(match.group(1))
-            else:
-                msg = f"pattern: {search_pattern} not detected in output:\n\n{remote_output}"
+            msg = f"pattern: {search_pattern} not detected in output:\n\n{remote_output}"
         raise ValueError(msg)
 
     def verify_space_available(self, search_pattern: str = r"(\d+)\s+\d+%$") -> bool:
@@ -161,15 +155,13 @@ class ExtremeExosFileTransfer(BaseFileTransfer):
         remote_out = self.ssh_ctl_chan._send_command_str(remote_cmd)
         assert isinstance(remote_file, str)
         escape_file_name = re.escape(remote_file)
-        pattern = r".*({}).*".format(escape_file_name)
-        match = re.search(pattern, remote_out)
-        if match:
-            line = match.group(0)
-            # Format will be: -rw-r--r--    1 admin    admin     3934 Jan 24 03:50 filename
-            # Format will be: "-rw-r--r--    1 admin    admin     3934 Jan 24  2022 filename"
-            file_size = line.split()[4]
-        else:
+        pattern = f".*({escape_file_name}).*"
+        if not (match := re.search(pattern, remote_out)):
             raise IOError("Unable to parse 'ls' output in remote_file_size method")
+        line = match[0]
+        # Format will be: -rw-r--r--    1 admin    admin     3934 Jan 24 03:50 filename
+        # Format will be: "-rw-r--r--    1 admin    admin     3934 Jan 24  2022 filename"
+        file_size = line.split()[4]
         if (
             "No such file or directory" in remote_out
             or "Invalid pathname" in remote_out

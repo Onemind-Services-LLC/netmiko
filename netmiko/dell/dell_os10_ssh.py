@@ -102,7 +102,7 @@ class DellOS10FileTransfer(BaseFileTransfer):
         """Check if the dest_file already exists on the file system (return boolean)."""
         if self.direction == "put":
             remote_out = self.ssh_ctl_chan._send_command_str(remote_cmd)
-            search_string = r"Directory contents .*{}".format(self.dest_file)
+            search_string = f"Directory contents .*{self.dest_file}"
             return bool(re.search(search_string, remote_out, flags=re.DOTALL))
         elif self.direction == "get":
             return os.path.exists(self.dest_file)

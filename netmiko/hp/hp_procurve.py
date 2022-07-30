@@ -59,7 +59,7 @@ class HPProcurveBase(CiscoSSHConnection):
         # ProCurve requires elevated privileges to disable output paging :-(
         self.enable()
         self.set_terminal_width(command="terminal width 511", pattern="terminal")
-        command = self.RETURN + "no page"
+        command = f"{self.RETURN}no page"
         self.disable_paging(command=command)
 
     def check_config_mode(
@@ -122,11 +122,11 @@ class HPProcurveBase(CiscoSSHConnection):
         output += new_output
         log.debug(f"{output}")
         self.clear_buffer()
-        msg = (
-            "Failed to enter enable mode. Please ensure you pass "
-            "the 'secret' argument to ConnectHandler."
-        )
         if not self.check_enable_mode():
+            msg = (
+                "Failed to enter enable mode. Please ensure you pass "
+                "the 'secret' argument to ConnectHandler."
+            )
             raise ValueError(msg)
         return output
 
@@ -155,14 +155,12 @@ class HPProcurveBase(CiscoSSHConnection):
                 output += new_output
 
                 if "Do you want to log out" in new_output:
-                    self.write_channel("y" + self.RETURN)
+                    self.write_channel(f"y{self.RETURN}")
                     break
                 elif "Do you want to save the current" in new_output:
                     # Don't automatically save the config (user's responsibility)
-                    self.write_channel("n" + self.RETURN)
-            except socket.error:
-                break
-            except ReadTimeout:
+                    self.write_channel(f"n{self.RETURN}")
+            except (socket.error, ReadTimeout):
                 break
             except Exception:
                 break

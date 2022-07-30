@@ -148,14 +148,13 @@ class SerialChannel(Channel):
         """Single read of available data."""
         if self.remote_conn is None:
             raise ReadException("Attempt to read, but there is no active channel.")
-        if self.remote_conn.in_waiting > 0:
-            output = self.remote_conn.read(self.remote_conn.in_waiting).decode(
-                "utf-8", "ignore"
-            )
-            assert isinstance(output, str)
-            return output
-        else:
+        if self.remote_conn.in_waiting <= 0:
             return ""
+        output = self.remote_conn.read(self.remote_conn.in_waiting).decode(
+            "utf-8", "ignore"
+        )
+        assert isinstance(output, str)
+        return output
 
     def read_channel(self) -> str:
         """Read all of the available data from the channel."""

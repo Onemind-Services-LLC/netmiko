@@ -118,7 +118,14 @@ class LinuxSSH(CiscoSSHConnection):
         re_flags: int = re.IGNORECASE,
     ) -> str:
         """Attempt to become root."""
-        msg = """
+        output = ""
+        if not self.check_enable_mode():
+            self.write_channel(self.normalize_cmd(cmd))
+            # Failed "sudo -s" will put "#" in output so have to delineate further
+            root_prompt = rf"(?m:{LINUX_PROMPT_ROOT}\s*$)"
+            prompt_or_password = rf"({root_prompt}|{pattern})"
+            output += self.read_until_pattern(pattern=prompt_or_password)
+            msg = """
 
 Netmiko failed to elevate privileges.
 
@@ -128,13 +135,6 @@ permissions.
 
 """
 
-        output = ""
-        if not self.check_enable_mode():
-            self.write_channel(self.normalize_cmd(cmd))
-            # Failed "sudo -s" will put "#" in output so have to delineate further
-            root_prompt = rf"(?m:{LINUX_PROMPT_ROOT}\s*$)"
-            prompt_or_password = rf"({root_prompt}|{pattern})"
-            output += self.read_until_pattern(pattern=prompt_or_password)
             if re.search(pattern, output, flags=re_flags):
                 self.write_channel(self.normalize_cmd(self.secret))
                 try:

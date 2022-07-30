@@ -17,13 +17,12 @@ def show_version_queue(a_device, output_q):
     Use Netmiko to execute show version. Use a queue to pass the data back to
     the main process.
     """
-    output_dict = {}
     remote_conn = ConnectHandler(**a_device)
     hostname = remote_conn.base_prompt
     output = ("#" * 80) + "\n"
     output += remote_conn.send_command("show version") + "\n"
     output += ("#" * 80) + "\n"
-    output_dict[hostname] = output
+    output_dict = {hostname: output}
     output_q.put(output_dict)
 
 

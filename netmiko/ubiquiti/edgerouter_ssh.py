@@ -19,7 +19,7 @@ class UbiquitiEdgeRouterSSH(VyOSSSH):
         self, cmd: str = "save", confirm: bool = False, confirm_response: str = ""
     ) -> str:
         """Saves Config."""
-        if confirm is True:
+        if confirm:
             raise ValueError("EdgeRouter does not support save_config confirmation.")
         output = self._send_command_str(command_string=cmd)
         if "Done" not in output:

@@ -38,6 +38,7 @@ Examples
 >>> remote_device['device_type'] = best_match
 >>> connection = ConnectHandler(**remote_device)
 """
+
 from typing import Any, List, Optional, Union, Dict
 import re
 import time
@@ -256,12 +257,12 @@ SSH_MAPPER_DICT = {
 
 # Sort SSH_MAPPER_DICT such that the most common commands are first
 cmd_count: Dict[str, int] = {}
-for k, v in SSH_MAPPER_DICT.items():
+for v in SSH_MAPPER_DICT.values():
     my_cmd = v["cmd"]
     assert isinstance(my_cmd, str)
     count = cmd_count.setdefault(my_cmd, 0)
     cmd_count[my_cmd] = count + 1
-cmd_count = {k: v for k, v in sorted(cmd_count.items(), key=lambda item: item[1])}
+cmd_count = dict(sorted(cmd_count.items(), key=lambda item: item[1]))
 
 # SSH_MAPPER_BASE is a list
 SSH_MAPPER_BASE = sorted(
@@ -326,8 +327,7 @@ class SSHDetect(object):
             call_method = tmp_dict.pop("dispatch")
             assert isinstance(call_method, str)
             autodetect_method = getattr(self, call_method)
-            accuracy = autodetect_method(**tmp_dict)
-            if accuracy:
+            if accuracy := autodetect_method(**tmp_dict):
                 self.potential_matches[device_type] = accuracy
                 if accuracy >= 99:  # Stop the loop as we are sure of our match
                     best_match = sorted(
@@ -385,13 +385,11 @@ class SSHDetect(object):
         response : str
             The response from the remote device.
         """
-        cached_results = self._results_cache.get(cmd)
-        if not cached_results:
-            response = self._send_command(cmd)
-            self._results_cache[cmd] = response
-            return response
-        else:
+        if cached_results := self._results_cache.get(cmd):
             return cached_results
+        response = self._send_command(cmd)
+        self._results_cache[cmd] = response
+        return response
 
     def _autodetect_remote_version(
         self,
@@ -425,12 +423,10 @@ class SSHDetect(object):
             assert remote_conn.transport is not None
             remote_version = remote_conn.transport.remote_version
             for pattern in invalid_responses:
-                match = re.search(pattern, remote_version, flags=re.I)
-                if match:
+                if match := re.search(pattern, remote_version, flags=re.I):
                     return 0
             for pattern in search_patterns:
-                match = re.search(pattern, remote_version, flags=re_flags)
-                if match:
+                if match := re.search(pattern, remote_version, flags=re_flags):
                     return priority
         except Exception:
             return 0
@@ -476,12 +472,10 @@ class SSHDetect(object):
             response = self._send_command_wrapper(cmd)
             # Look for error conditions in output
             for pattern in invalid_responses:
-                match = re.search(pattern, response, flags=re.I)
-                if match:
+                if match := re.search(pattern, response, flags=re.I):
                     return 0
             for pattern in search_patterns:
-                match = re.search(pattern, response, flags=re_flags)
-                if match:
+                if match := re.search(pattern, response, flags=re_flags):
                     return priority
         except Exception:
             return 0

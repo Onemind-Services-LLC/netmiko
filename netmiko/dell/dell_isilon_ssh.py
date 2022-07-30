@@ -40,7 +40,7 @@ class DellIsilonSSH(BaseConnection):
             delay_factor = 1.0
         else:
             delay_factor = self.global_delay_factor
-        command = self.RETURN + "zsh" + self.RETURN
+        command = f"{self.RETURN}zsh{self.RETURN}"
         self.write_channel(command)
         time.sleep(0.25 * delay_factor)
         self._set_prompt(prompt_terminator)

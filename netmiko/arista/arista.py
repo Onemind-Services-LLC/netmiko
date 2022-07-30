@@ -69,13 +69,11 @@ class AristaBase(CiscoSSHConnection):
 
     def _enter_shell(self) -> str:
         """Enter the Bourne Shell."""
-        output = self._send_command_str("bash", expect_string=r"[\$#]")
-        return output
+        return self._send_command_str("bash", expect_string=r"[\$#]")
 
     def _return_cli(self) -> str:
         """Return to the CLI."""
-        output = self._send_command_str("exit", expect_string=r"[#>]")
-        return output
+        return self._send_command_str("exit", expect_string=r"[#>]")
 
 
 class AristaSSH(AristaBase):

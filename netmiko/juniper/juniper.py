@@ -42,9 +42,9 @@ class JuniperBase(NoEnable, BaseConnection):
 
     def _determine_mode(self, data: str = "") -> str:
         """Determine whether in shell or CLI."""
-        pattern = r"[%>$#]"
         if not data:
             self.write_channel(self.RETURN)
+            pattern = r"[%>$#]"
             data = self.read_until_pattern(pattern=pattern, read_timeout=10)
 
         if "%" in data or "$" in data:
@@ -63,7 +63,7 @@ class JuniperBase(NoEnable, BaseConnection):
             cur_prompt = self.read_until_pattern(pattern=shell_pattern, read_timeout=10)
             if re.search(r"root@", cur_prompt) or re.search(r"^%$", cur_prompt.strip()):
                 cli_pattern = r"[>#]"
-                self.write_channel("cli" + self.RETURN)
+                self.write_channel(f"cli{self.RETURN}")
                 self.read_until_pattern(pattern=cli_pattern, read_timeout=10)
         return
 
@@ -173,7 +173,7 @@ class JuniperBase(NoEnable, BaseConnection):
             commit_marker = "configuration check succeeds"
         elif confirm:
             if confirm_delay:
-                command_string = "commit confirmed " + str(confirm_delay)
+                command_string = f"commit confirmed {str(confirm_delay)}"
             else:
                 command_string = "commit confirmed"
             commit_marker = "commit confirmed will be automatically rolled back in"
@@ -183,7 +183,7 @@ class JuniperBase(NoEnable, BaseConnection):
             if '"' in comment:
                 raise ValueError("Invalid comment contains double quote")
             comment = f'"{comment}"'
-            command_string += " comment " + comment
+            command_string += f" comment {comment}"
 
         if and_quit:
             command_string += " and-quit"
@@ -234,10 +234,14 @@ class JuniperBase(NoEnable, BaseConnection):
 
         response_list = a_string.split(self.RESPONSE_RETURN)
         last_line = response_list[-1]
-        for pattern in strings_to_strip:
-            if re.search(pattern, last_line, flags=re.I):
-                return self.RESPONSE_RETURN.join(response_list[:-1])
-        return a_string
+        return next(
+            (
+                self.RESPONSE_RETURN.join(response_list[:-1])
+                for pattern in strings_to_strip
+                if re.search(pattern, last_line, flags=re.I)
+            ),
+            a_string,
+        )
 
     def cleanup(self, command: str = "exit") -> None:
         """Gracefully exit the SSH session."""

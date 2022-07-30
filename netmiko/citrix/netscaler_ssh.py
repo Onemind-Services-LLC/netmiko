@@ -40,7 +40,4 @@ class NetscalerSSH(NoConfig, BaseConnection):
         """Strip 'Done' from command output"""
         output = super().strip_prompt(a_string)
         lines = output.split(self.RESPONSE_RETURN)
-        if "Done" in lines[-1]:
-            return self.RESPONSE_RETURN.join(lines[:-1])
-        else:
-            return output
+        return self.RESPONSE_RETURN.join(lines[:-1]) if "Done" in lines[-1] else output
